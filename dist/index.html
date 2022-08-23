@@ -1,0 +1,134 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VR game</title><script src="https://aframe.io/releases/0.9.2/aframe.min.js"></script><style type="text/css">body,html{width:100%;height:100%;margin:0;padding:0}body{background-color:#6495ed}</style></head><body><script>AFRAME.registerSystem('level-manager', {
+    init: function () {
+      this.defaultScore = {
+        hell: 0,
+        heaven: 0
+      };
+      this.score = this.defaultScore;
+    },
+    resetScore: function () {
+      this.score = this.defaultScore
+    },
+    updateScore: function (triggerType) {
+      this.score[triggerType]++;
+    }
+  })
+  AFRAME.registerSystem('person-manager', {
+    init: function () {
+      this.personInfo = {
+        name: 'Test person',
+        age: 35,
+        job: 'Unemployed',
+        additionalInfo: ''
+      }
+      this.createPerson();
+      //  TODO get triggers positions
+    },
+    displayInfo: function () {
+
+    },
+    createPerson: function () {
+      const person = document.createElement('a-entity');
+      person.setAttribute('person', '');
+      person.setAttribute("animation__move1", "property: position; to: 0 1 -2; dur: 2000; easing: linear")
+      this.el.appendChild(person)
+    },
+    removePerson: function () {
+      document.getElementById('person').remove();
+    }
+  })
+  AFRAME.registerSystem('trigger', {
+    init: function () {
+      this.temp = new THREE.Vector3();
+      this.temp2 = new THREE.Vector3();
+      this.hellTrigger = document.getElementById('hell');
+      this.heavenTrigger = document.getElementById('heaven');
+    },
+    resolveCollision: function () {
+      let hlp = this.hellTrigger.object3D.worldToLocal(this.temp.copy(this.personPosition));
+      let hvp = this.heavenTrigger.object3D.worldToLocal(this.temp2.copy(this.personPosition));
+      const hellBoundingBox = this.hellTrigger.components.geometry.geometry.boundingBox;
+      const heavenBoundingBox = this.heavenTrigger.components.geometry.geometry.boundingBox;
+      if (hellBoundingBox.containsPoint(hlp) || heavenBoundingBox.containsPoint(hvp)) {
+        const type = hellBoundingBox.containsPoint(hlp) ? 'hell' : 'heaven'
+        document.querySelector('a-scene').systems['person-manager'].removePerson();
+        document.querySelector('a-scene').systems['person-manager'].createPerson();
+        document.querySelector('a-scene').systems['level-manager'].updateScore(type);
+        this.personPosition = null;
+      }
+    },
+    tick: function () {
+      if (!this.personPosition) {
+        let person = document.getElementById('person');
+        if (!person) return;
+        this.personPosition = person.object3D.position;
+      }
+      this.resolveCollision();
+    }
+  });
+  AFRAME.registerComponent('person', {
+    init: function () {
+      const el = this.el;
+      el.setAttribute('id', 'person');
+      el.setAttribute('position', "0 1 -4");
+      el.setAttribute('geometry', 'primitive: box; height: 2');
+      el.setAttribute('scale', '1 0.6 0.6');
+      el.components.geometry.geometry.computeBoundingBox();
+    },
+  });
+  AFRAME.registerComponent('side-trigger', {
+    schema: {
+      bgColor: {type: 'string'}
+    },
+    init: function () {
+      const el = this.el;
+      const bgColor = this.data.bgColor;
+      el.setAttribute('geometry', 'width: 1; height: 2; depth: 2')
+      el.setAttribute('material', 'visible: false');
+      el.setAttribute('light', 'type: spot; penumbra: 0.5');
+      el.setAttribute('light', 'color', bgColor);
+      el.components.geometry.geometry.computeBoundingBox();
+    },
+  });
+  AFRAME.registerComponent('button', {
+    dependencies: ['material'],
+    schema: {
+      color: {type: 'color', default: '#000'},
+    },
+    init: function () {
+      const {el, data} = this;
+      const button = document.createElement('a-cylinder');
+      button.setAttribute('scale', '0.1 0.1 0.1');
+      button.setAttribute('material', 'color', data.color);
+      el.appendChild(button);
+    }
+  });
+  AFRAME.registerComponent('hell-button', {
+    init: function () {
+      this.el.setAttribute('button', 'color: red')
+    },
+    events: {
+      click: function (evt) {
+        const person = document.getElementById('person')
+        person.setAttribute("animation__move2", "property: position; to: -3 1 -2; dur: 2000; easing: linear")
+        // Shaking animation
+        // person.setAttribute("animation__move4", "property: position; dir: alternate; from: 0 0.95 -2; to: 0 1.05 -2; dur: 500; easing: linear; loop: true")
+      }
+    }
+  });
+  AFRAME.registerComponent('heaven-button', {
+    init: function () {
+      this.el.setAttribute('button', 'color: green')
+    },
+    events: {
+      click: function (evt) {
+        const person = document.getElementById('person')
+        person.setAttribute("animation__move3", "property: position; to: 3 1 -2; dur: 2000; easing: linear")
+      }
+    }
+  });
+  AFRAME.registerComponent('info', {
+    init: function () {
+
+    },
+  });</script><a-scene><a-assets><img id="advertisement" src="./head.png"></a-assets><a-plane id="floor" rotation="-90 0 0" geometry="width: 7; height: 7" material="color: #a3a3a3" position="0 0 -1"></a-plane><a-plane id="wall" geometry="width: 2; height: 2" material="color: grey" position="0 1 1" rotation="0 -180 0"></a-plane><a-plane id="wall" geometry="width: 2; height: 2" material="color: grey" position="1 1 0" rotation="0 -90 0"></a-plane><a-plane id="wall" geometry="width: 2; height: 2" material="color: grey" position="-1 1 0" rotation="0 90 0"></a-plane><a-plane id="wall" geometry="width: 2; height: 2" material="color: grey" position="0 2 0" rotation="90 0 0"></a-plane><a-box id="table" geometry="width: 2; height: 0.1" position="0 1 -0.7" scale="1 1 0.7" material="color: #461b1b"></a-box><a-entity id="hellButton" hell-button position="-0.4 1.01 -0.7"></a-entity><a-entity id="heavenButton" heaven-button position="0.4 1.01 -0.7"></a-entity><a-plane id="bg" geometry="width: 9; height: 4" material="color: #8c84ae" position="0 2 -3"></a-plane><a-entity id="hell" side-trigger="bgColor: #f03d3d" position="-3 1 -1"></a-entity><a-entity id="heaven" side-trigger="bgColor: #e1fe4d" position="3 1 -1"></a-entity><a-entity id="mainLight" light="type: hemisphere; intensity: 1"></a-entity><a-entity id="glass" position="0 1.8 -1.02" geometry="primitive: box; width: 2; depth: 0.05" material="opacity: 0.3"><a-entity position="0 -0.55 0.1" geometry="primitive: circle; radius: 0.35; thetaLength: 180" material="opacity: 0; trasnparent: true"></a-entity></a-entity><a-camera><a-cursor></a-cursor></a-camera></a-scene><script type="text/javascript">!function(n){var r={};function o(e){if(r[e])return r[e].exports;var t=r[e]={i:e,l:!1,exports:{}};return n[e].call(t.exports,t,t.exports,o),t.l=!0,t.exports}o.m=n,o.c=r,o.d=function(e,t,n){o.o(e,t)||Object.defineProperty(e,t,{enumerable:!0,get:n})},o.r=function(e){"undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(e,Symbol.toStringTag,{value:"Module"}),Object.defineProperty(e,"__esModule",{value:!0})},o.t=function(t,e){if(1&e&&(t=o(t)),8&e)return t;if(4&e&&"object"==typeof t&&t&&t.__esModule)return t;var n=Object.create(null);if(o.r(n),Object.defineProperty(n,"default",{enumerable:!0,value:t}),2&e&&"string"!=typeof t)for(var r in t)o.d(n,r,function(e){return t[e]}.bind(null,r));return n},o.n=function(e){var t=e&&e.__esModule?function(){return e.default}:function(){return e};return o.d(t,"a",t),t},o.o=function(e,t){return Object.prototype.hasOwnProperty.call(e,t)},o.p="",o(o.s=0)}([function(e,t,n){"use strict";n.r(t),n(1),n(2)},function(e,t){},function(e,t,n){}])</script></body></html>
